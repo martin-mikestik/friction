@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Friction</string>
+    <string name="accessibility_description">Friction watches which app is opened so it can put a short pause in front of the apps you chose to block. Nothing leaves your phone.</string>
+</resources>

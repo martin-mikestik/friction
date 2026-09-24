@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Friction" parent="android:Theme.Material.NoActionBar" />
+
+    <!-- Fully transparent window: whatever is behind (the blocked app) stays visible.
+         The dark tint is drawn by the Compose UI itself. -->
+    <style name="Theme.Friction.Overlay" parent="android:Theme.Translucent.NoTitleBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+</resources>

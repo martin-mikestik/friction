@@ -1,0 +1,58 @@
+# Builds a signed APK on every push to main and publishes it as a GitHub Release.
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # adds a "Run workflow" button in the Actions tab
+
+permissions:
+  contents: write # needed to create releases
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle (with caching)
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Restore signing key from secrets
+        env:
+          SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+        run: |
+          if [ -z "$SIGNING_KEYSTORE_BASE64" ] || [ -z "$SIGNING_PASSWORD" ]; then
+            echo "::error::Secrets SIGNING_KEYSTORE_BASE64 and SIGNING_PASSWORD must be set (repo Settings > Secrets and variables > Actions)"
+            exit 1
+          fi
+          echo "$SIGNING_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/friction.jks"
+          echo "FRICTION_KEYSTORE_PATH=$RUNNER_TEMP/friction.jks" >> "$GITHUB_ENV"
+
+      - name: Build APK
+        env:
+          FRICTION_KEYSTORE_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace
+          cp app/build/outputs/apk/debug/app-debug.apk "friction-${{ github.run_number }}.apk"
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Friction build ${{ github.run_number }}
+          body: |
+            Commit ${{ github.sha }}
+
+            ${{ github.event.head_commit.message }}
+          files: friction-${{ github.run_number }}.apk
+          make_latest: true
