@@ -1,8 +1,15 @@
-# Friction (dummy build)
+# Friction
 
-Self-imposed app blocker for Android. This dummy version only proves the plumbing:
-permissions, app picker, AccessibilityService detection, and a transparent
-5-second countdown screen followed by 15 seconds of grace.
+Self-imposed app blocker for Android, built on learned helplessness: once an app group has
+used up its free time for the day, opening it requires passing a sequence of tasks that
+may fail anyway. See **[SPEC.md](SPEC.md)** for the concepts and rules.
+
+Code map:
+- `engine/`: pure Kotlin rules (stages, sessions, blocks, interruptions, usage maths). Unit-tested in `app/src/test`.
+- `data/`: JSON config/state files and the stats log.
+- `service/` + `FrictionAccessibilityService`: watches the foreground app and applies the rules.
+- `FrictionActivity` + `gate/`: the task-sequence and block screens, and the tasks themselves.
+- `MainActivity` + `ui/`: configuration screens.
 
 ## How the build loop works
 
@@ -65,22 +72,27 @@ Later builds install over the old one and keep your permissions (same key, highe
 Optional, and more comfortable: **Obtainium** (open-source, from GitHub/F-Droid) can watch the
 repo's releases and update the app for you. A private repo needs a GitHub token in Obtainium's settings.
 
-### 5. Grant permissions (in the app, *Setup* tab)
+### 5. Grant permissions (in the app, *Setup* screen)
 
 1. **Accessibility**: Settings → Accessibility → Installed apps → Friction → on.
    If it's greyed out ("Restricted setting"): App info → ⋮ (top right) → **Allow restricted settings**,
    then try again. Android does this for apps installed from a file.
 2. **Display over other apps**: a fallback that lets Friction open its screen from the background.
 3. **Unrestricted battery**: helps keep Samsung from killing the service.
+4. **Usage access**: measures today's usage per group (decides the stage).
 
-## Testing checklist
+## Testing checklist (v0.2)
 
-- [ ] *Setup → Preview friction screen*: the countdown appears **over** the Friction UI, which stays visible behind it (tinted/blurred).
-- [ ] *Apps*: tick an app (e.g. Calculator) → open it → countdown over it → after 5 s it disappears.
-- [ ] Use the app for 15 s → the countdown comes back.
-- [ ] Press Back during the countdown → you land on the home screen.
-- [ ] Reopen within the 15 s grace → no countdown.
-- [ ] *Log* tab shows the events; **Share** sends the log (e.g. to yourself, or paste it to Claude).
+After installing, the Accessibility toggle might need re-enabling. Then also grant **Usage access** (Setup screen).
+
+- [ ] App groups → "Social" → tick a harmless app (e.g. Calculator) → Save.
+- [ ] Open it: stage 1 is free, so nothing happens. Status shows usage going up.
+- [ ] Status → "Debug: +10 min" ×6 → reopen the app → the "burnout" sequence starts.
+- [ ] Let Go on the intro → home, no block. Start → fail on purpose → blocked 10 min (black timer screen).
+- [ ] Status → "Debug: clear" (removes the block, keeps the debug usage) → pass the sequence → 15-minute session (Status shows the countdown).
+- [ ] +30 min more → reopen: the session ended (new stage) → "hell" → after passing, black clouds show up within 1–3 min of use.
+- [ ] Task variants → any → "Save & try" to practise a task without consequences.
+- [ ] Log → Share log / Share stats.
 
 ## Logs
 

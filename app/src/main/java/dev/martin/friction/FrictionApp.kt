@@ -3,6 +3,10 @@ package dev.martin.friction
 import android.app.Application
 import android.os.Build
 import android.util.Log
+import dev.martin.friction.data.ConfigStore
+import dev.martin.friction.data.StateStore
+import dev.martin.friction.data.StatsLog
+import dev.martin.friction.service.GateController
 
 class FrictionApp : Application() {
     override fun onCreate() {
@@ -20,5 +24,10 @@ class FrictionApp : Application() {
             FLog.writeNow("CRASH on thread ${thread.name}:\n${Log.getStackTraceString(e)}\n")
             previous?.uncaughtException(thread, e)
         }
+
+        StatsLog.init(this)
+        ConfigStore.init(this)
+        StateStore.init(this)
+        GateController.init(this)
     }
 }
