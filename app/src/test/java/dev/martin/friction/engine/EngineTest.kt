@@ -97,7 +97,7 @@ class EngineTest {
         assertNull(s.interruption)
         s = Engine.tickInterruptions(cfg, group, s, 1, Random(2)).state
         val active = s.interruption!!
-        assertTrue(active.remainingMs in 7_000L..30_000L)
+        assertTrue(active.remainingMs in 5_000L..30_000L)
 
         s = Engine.tickInterruptions(cfg, group, s, active.remainingMs - 1, Random(3)).state
         assertEquals(1L, s.interruption!!.remainingMs)

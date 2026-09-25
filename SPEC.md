@@ -53,6 +53,7 @@ group for a while.
 - Only during a session, from that session's interruption set.
 - The launcher counts only in-app time. An interruption's hidden duration pauses while you're outside the group's apps and resumes when you return.
 - *Black clouds*: dark puffs drift over the whole screen (touches are swallowed); density 1–10; duration fixed or random range (default 7–30 s), never shown.
+- *Glitch*: Friction takes a screenshot of the app (Android 11+ accessibility screenshot), then shows it cut into horizontal bands that jump sideways and change colour, re-rolled ~7–16×/s. Intensity 1–10 sets band thickness (48dp → 3dp), the share of bands that glitch (≈17% → 100%) and the shift size (up to ~38% of the width). At 10 nothing stays in place and bands are thinner than a line of text, so the app is unreadable. Touches are swallowed. If no screenshot is available, the glitched bands are solid noise. Duration default 5–20 s, hidden.
 
 ## Task types (v0.2)
 

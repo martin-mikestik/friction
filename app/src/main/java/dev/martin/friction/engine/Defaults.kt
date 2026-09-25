@@ -36,12 +36,17 @@ object Defaults {
             mapOf(InterruptionTypes.DENSITY to f(6.0), InterruptionTypes.DURATION to ParamValue.Range(7.0, 30.0)),
         )
 
+        val glitch = InterruptionVariant(
+            "i-glitch", "Glitch", InterruptionTypes.GLITCH,
+            mapOf(InterruptionTypes.INTENSITY to f(7.0), InterruptionTypes.DURATION to ParamValue.Range(5.0, 20.0)),
+        )
+
         val daily = StageSequence(
             "st-default", "Default day",
             listOf(
                 Stage(60.0, null, SessionRules(lengthMinutes = null)),
                 Stage(30.0, burnout.id, SessionRules(lengthMinutes = 15.0)),
-                Stage(0.0, hell.id, SessionRules(lengthMinutes = 10.0, interruptionIds = listOf(clouds.id),
+                Stage(0.0, hell.id, SessionRules(lengthMinutes = 10.0, interruptionIds = listOf(clouds.id, glitch.id),
                     launcherMinSeconds = 60.0, launcherMaxSeconds = 180.0)),
             ),
         )
@@ -51,7 +56,7 @@ object Defaults {
             resetMinute = 0,
             taskVariants = listOf(wait30, wait60, coin, grim, type12, typeNasty, shake, tilt),
             taskSequences = listOf(burnout, hell),
-            interruptionVariants = listOf(clouds),
+            interruptionVariants = listOf(clouds, glitch),
             stageSequences = listOf(daily),
             groups = listOf(AppGroup("g-social", "Social", emptySet(), daily.id)),
         )

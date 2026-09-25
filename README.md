@@ -17,12 +17,15 @@ Code map:
 edit code ──git push──▶ GitHub ──Actions──▶ signed APK ──Release──▶ phone downloads & installs
 ```
 
-`.github/workflows/build.yml` runs on every push to `main`:
+`.github/workflows/build.yml` runs on every push to **any branch**:
 
 1. Starts a fresh Ubuntu machine (Android SDK is preinstalled there).
 2. Restores the signing key from the repo's encrypted secrets.
-3. Runs `./gradlew assembleDebug`.
-4. Publishes the APK as a GitHub Release named `build-<N>`.
+3. Runs the unit tests and `./gradlew assembleDebug`.
+4. Publishes the APK:
+   - from `main`: a normal release `build-<N>` (what `/releases/latest` points to)
+   - from any other branch: a **pre-release** `test-<N>-<branch>`, to try a change before merging it
+5. If the build fails, it pushes the log to the branch `ci-logs/<branch>`. That lets Claude read errors with plain git.
 
 Build number `N` is also the app's `versionCode`, so each build installs over the previous one.
 
