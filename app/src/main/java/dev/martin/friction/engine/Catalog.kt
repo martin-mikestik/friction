@@ -80,9 +80,11 @@ object TaskTypes {
 
 object InterruptionTypes {
     const val CLOUDS = "clouds"
+    const val GLITCH = "glitch"
 
     const val DENSITY = "density"
     const val DURATION = "duration"
+    const val INTENSITY = "intensity"
 
     val all: List<TypeDef> = listOf(
         TypeDef(
@@ -90,6 +92,15 @@ object InterruptionTypes {
             listOf(
                 ParamSpec(DENSITY, "Density", ParamKind.INTEGER, fixed(6.0), 1.0, 10.0, "/10"),
                 ParamSpec(DURATION, "Duration", ParamKind.NUMBER, ParamValue.Range(7.0, 30.0), 1.0, 600.0, "s",
+                    help = "Use a range to make it unpredictable."),
+            ),
+        ),
+        TypeDef(
+            GLITCH, "Glitch", "Slices of the screen jump sideways and change colour at random. At intensity 10 the app is unreadable.",
+            listOf(
+                ParamSpec(INTENSITY, "Intensity", ParamKind.INTEGER, fixed(6.0), 1.0, 10.0, "/10",
+                    help = "1 = a few mild glitches, 10 = everything shredded."),
+                ParamSpec(DURATION, "Duration", ParamKind.NUMBER, ParamValue.Range(5.0, 20.0), 1.0, 600.0, "s",
                     help = "Use a range to make it unpredictable."),
             ),
         ),

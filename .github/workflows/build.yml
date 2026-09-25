@@ -1,13 +1,18 @@
-# Builds a signed APK on every push to main and publishes it as a GitHub Release.
+# Builds and tests every branch.
+#  - main:           signed APK published as the normal "latest" release (build-N).
+#  - other branches: signed APK published as a PRE-release (test-N-<branch>) so it can be
+#                    tried on the phone before merging.
+#  - on failure:     the build log is pushed to branch ci-logs/<branch>, so it can be read
+#                    with plain git (no GitHub API access needed).
 name: Build APK
 
 on:
   push:
-    branches: [main]
+    branches: ['**', '!ci-logs/**']
   workflow_dispatch: # adds a "Run workflow" button in the Actions tab
 
 permissions:
-  contents: write # needed to create releases
+  contents: write # needed to create releases and push the failure log
 
 jobs:
   build:
@@ -25,34 +30,71 @@ jobs:
       - name: Set up Gradle (with caching)
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Work out release names
+        id: rel
+        run: |
+          slug=$(printf '%s' "$GITHUB_REF_NAME" | sed 's/[^A-Za-z0-9._-]/-/g')
+          echo "slug=$slug" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_REF_NAME" = "main" ]; then
+            echo "tag=build-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+            echo "name=Friction build ${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+            echo "latest=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=test-${{ github.run_number }}-$slug" >> "$GITHUB_OUTPUT"
+            echo "name=TEST build ${{ github.run_number }} ($GITHUB_REF_NAME)" >> "$GITHUB_OUTPUT"
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+            echo "latest=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Restore signing key from secrets
         env:
           SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
         run: |
           if [ -z "$SIGNING_KEYSTORE_BASE64" ] || [ -z "$SIGNING_PASSWORD" ]; then
-            echo "::error::Secrets SIGNING_KEYSTORE_BASE64 and SIGNING_PASSWORD must be set (repo Settings > Secrets and variables > Actions)"
+            echo "::error::Secrets SIGNING_KEYSTORE_BASE64 and SIGNING_PASSWORD must be set (repo Settings > Secrets and variables > Actions)" | tee build.log
             exit 1
           fi
           echo "$SIGNING_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/friction.jks"
           echo "FRICTION_KEYSTORE_PATH=$RUNNER_TEMP/friction.jks" >> "$GITHUB_ENV"
 
-      - name: Build APK
+      - name: Test and build APK
         env:
           FRICTION_KEYSTORE_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
         run: |
+          set -o pipefail
           chmod +x gradlew
-          ./gradlew testDebugUnitTest assembleDebug --stacktrace
+          ./gradlew testDebugUnitTest assembleDebug --stacktrace 2>&1 | tee build.log
           cp app/build/outputs/apk/debug/app-debug.apk "friction-${{ github.run_number }}.apk"
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: build-${{ github.run_number }}
-          name: Friction build ${{ github.run_number }}
+          tag_name: ${{ steps.rel.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: ${{ steps.rel.outputs.name }}
+          prerelease: ${{ steps.rel.outputs.prerelease }}
+          make_latest: ${{ steps.rel.outputs.latest }}
           body: |
-            Commit ${{ github.sha }}
+            Branch `${{ github.ref_name }}`, commit ${{ github.sha }}
 
             ${{ github.event.head_commit.message }}
           files: friction-${{ github.run_number }}.apk
-          make_latest: true
+
+      - name: Publish build log to ci-logs branch (on failure)
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -f build.log ] || echo "No build log: the run failed before the build step. See the Actions tab." > build.log
+          mkdir -p "$RUNNER_TEMP/ci" && cd "$RUNNER_TEMP/ci"
+          tail -c 3000000 "$GITHUB_WORKSPACE/build.log" > build.log
+          printf 'run %s\nbranch %s\ncommit %s\n' "${{ github.run_number }}" "$GITHUB_REF_NAME" "$GITHUB_SHA" > info.txt
+          git init -q -b ci-log
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Failed build ${{ github.run_number }} on $GITHUB_REF_NAME"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" \
+            "HEAD:refs/heads/ci-logs/${{ steps.rel.outputs.slug }}"
